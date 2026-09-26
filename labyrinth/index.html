@@ -1,1 +1,328 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Das fiese Labyrinth - leicht kann ja jeder</title>
+<style>
+:root {
+  --cell:min(3.1vw,30px);
+  --wall:#292929;
+  --floor:#fff8e8;
+  --unknown:#111;
+  --accent:#ffd86b;
+  --goal:#9ed79a;
+  --fake:#f4b6b6;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; padding:20px 10px 36px;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  background:linear-gradient(#fff5cf,#fffdf6);
+  color:#222; text-align:center;
+}
+.wrap{width:min(1100px,100%);margin:auto}
+h1{margin:0 0 6px;font-size:clamp(26px,4vw,44px)}
+.sub{max-width:800px;margin:0 auto 14px;line-height:1.45}
+.hud{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
+.pill{background:white;border:2px solid #222;border-radius:999px;padding:8px 13px;font-weight:800;box-shadow:3px 3px 0 #222}
+.word{letter-spacing:.14em;min-width:220px}
+#maze{
+  margin:auto; display:grid;
+  grid-template-columns:repeat(31,var(--cell));
+  grid-template-rows:repeat(21,var(--cell));
+  width:calc(31 * var(--cell));
+  border:4px solid #222;border-radius:14px;overflow:hidden;
+  background:#111;box-shadow:8px 8px 0 rgba(0,0,0,.14);
+}
+.cell{
+  width:var(--cell);height:var(--cell);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;user-select:none;
+  font-size:calc(var(--cell)*.46);font-weight:900;
+}
+.wall{background:var(--wall)}
+.floor{background:var(--floor)}
+.unknown{background:var(--unknown)!important;color:transparent!important}
+.unknown *{visibility:hidden}
+.goal{background:var(--goal)}
+.fake{background:var(--fake)}
+.letter{
+  width:78%;height:78%;border-radius:50%;
+  background:var(--accent);border:1.8px solid #222;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:1.5px 1.5px 0 #222;
+  font-size:calc(var(--cell)*.45)
+}
+.player{
+  width:78%;height:78%;border-radius:50%;
+  background:white;border:1.8px solid #222;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:1.5px 1.5px 0 #222;z-index:5;
+  font-size:calc(var(--cell)*.52)
+}
+.controls{margin:16px auto 0;display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(2,54px);gap:7px;justify-content:center}
+.controls button,#reset{border:2px solid #222;background:white;border-radius:12px;font:inherit;font-weight:900;box-shadow:3px 3px 0 #222;cursor:pointer}
+.up{grid-column:2} .left{grid-column:1;grid-row:2} .down{grid-column:2;grid-row:2} .right{grid-column:3;grid-row:2}
+#reset{margin-top:12px;padding:8px 15px}
+.msg{min-height:28px;margin-top:12px;font-weight:800}
+.win{position:fixed;inset:0;background:rgba(0,0,0,.46);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.win.show{display:flex}
+.card{max-width:500px;width:100%;background:#fffdf4;border:3px solid #222;border-radius:22px;padding:28px;box-shadow:10px 10px 0 #222}
+.solution{font-size:clamp(30px,8vw,52px);font-weight:1000;letter-spacing:.11em;margin:12px 0 18px}
+.card button{padding:10px 18px;border-radius:12px;border:2px solid #222;background:var(--accent);font-weight:900;box-shadow:3px 3px 0 #222;cursor:pointer}
+.small{font-size:13px;opacity:.75;margin-top:8px}
+@media(max-width:700px){:root{--cell:3vw}.sub{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>😈 Das fiese Labyrinth - leicht kann ja jeder</h1>
+  <p class="sub">
+    Sammle die richtigen 9 Buchstaben und finde danach den echten Ausgang.
+    Aber Vorsicht: Manche Buchstaben sind Fallen. Ein falscher Buchstabe schickt dich direkt zurück zum Start.
+  </p>
 
+  <div class="hud">
+    <div class="pill">Gefunden: <span id="count">0</span>/9</div>
+    <div class="pill word" id="word">_ _ _ _ _ _ _ _ _</div>
+    <div class="pill">Fehler: <span id="mistakes">0</span></div>
+    <div class="pill">Schritte: <span id="steps">0</span></div>
+  </div>
+
+  <div id="maze"></div>
+  <div class="small">Du siehst nur den Bereich direkt um dein Männchen. 🚪 kann ein falscher Ausgang sein.</div>
+
+  <div class="controls">
+    <button class="up" data-dir="up">▲</button>
+    <button class="left" data-dir="left">◀</button>
+    <button class="down" data-dir="down">▼</button>
+    <button class="right" data-dir="right">▶</button>
+  </div>
+
+  <button id="reset">↻ Neu starten</button>
+  <div class="msg" id="msg">Steuerung: Pfeiltasten oder WASD.</div>
+</div>
+
+<div class="win" id="win">
+  <div class="card">
+    <h2>Geschafft! 🎉</h2>
+    <p>Alle richtigen Buchstaben gefunden – trotz Fallen.</p>
+    <div class="solution">SPIEGELEI</div>
+    <p>Das klingt ziemlich nach etwas, das man in einer Pfanne machen könnte … 🍳</p>
+    <button onclick="resetGame()">Nochmal spielen</button>
+  </div>
+</div>
+
+<script>
+const raw=[
+"###############################",
+"#S..........#.............#...#",
+"#.###.#.#####.#.###.###.#.#.#.#",
+"#...#.#.............#.......#.#",
+"###.#.#####.#.#####.#.###.#.#.#",
+"#...#.....#.......#.#.#...#.#.#",
+"#.#.###.#.#.#####.#.#.#.#####.#",
+"#.#.....#...#.....#.#.........#",
+"#.###########.#######.#######.#",
+"#.#.........#...#.....#.....#.#",
+"#.#.#.#.#.#.###.#.#####.#.###.#",
+"#...#.#.#.....#...#...#...#...#",
+"#####.#.#.#.#.#####.###.#.#.###",
+"#.....#.#.#.#.....#.....#.#...#",
+"#.#.#####.#.#####.#.#####.###.#",
+"#.#.#.....#.....#...#..G#...#.#",
+"#.###.#######.#.#####.#####.#.#",
+"#.....#.....#.#.....#.....#...#",
+"#.#####.###.#####.#.#####.#####",
+"#.......#.........#...........#",
+"###############################"
+];
+
+const correctLetters={
+  "1,11": {letter:"S", index:0},
+  "19,29": {letter:"P", index:1},
+  "13,7": {letter:"I", index:2},
+  "7,19": {letter:"E", index:3},
+  "5,27": {letter:"G", index:4},
+  "17,13": {letter:"E", index:5},
+  "11,21": {letter:"L", index:6},
+  "19,9": {letter:"E", index:7},
+  "9,27": {letter:"I", index:8}
+};
+const decoyLetters={
+  "15,22": "U",
+  "16,27": "R",
+  "13,25": "J",
+  "19,24": "T",
+  "19,19": "O",
+  "15,17": "Z",
+  "2,29": "W",
+  "7,24": "B",
+  "19,4": "H",
+  "10,17": "Y",
+  "13,14": "K",
+  "17,1": "F",
+  "4,21": "E",
+  "1,25": "L"
+};
+const fakeExits=new Set(["15,3"]);
+
+const start={r:1,c:1};
+let player={...start};
+let collected=new Set();
+let triggeredDecoys=new Set();
+let steps=0;
+let mistakes=0;
+
+const maze=document.getElementById("maze");
+const wordEl=document.getElementById("word");
+const countEl=document.getElementById("count");
+const stepsEl=document.getElementById("steps");
+const mistakesEl=document.getElementById("mistakes");
+const msg=document.getElementById("msg");
+const win=document.getElementById("win");
+
+function key(r,c){return `${r},${c}`;}
+function isFloor(r,c){return raw[r]&&raw[r][c]&&raw[r][c]!=="#";}
+function visible(r,c){
+  const dr=Math.abs(r-player.r);
+  const dc=Math.abs(c-player.c);
+  return dr+dc<=3;
+}
+
+function render(){
+  maze.innerHTML="";
+  for(let r=0;r<raw.length;r++){
+    for(let c=0;c<raw[r].length;c++){
+      const ch=raw[r][c];
+      const cell=document.createElement("div");
+      cell.className="cell "+(ch==="#"?"wall":"floor");
+      const k=key(r,c);
+
+      if(ch==="G"){
+        cell.classList.add("goal");
+        cell.textContent="🏁";
+      }
+      if(fakeExits.has(k)){
+        cell.classList.add("fake");
+        cell.textContent="🚪";
+      }
+
+      if(correctLetters[k]&&!collected.has(k)){
+        const l=document.createElement("div");
+        l.className="letter";
+        l.textContent=correctLetters[k].letter;
+        cell.appendChild(l);
+      }
+      if(decoyLetters[k]&&!triggeredDecoys.has(k)){
+        const l=document.createElement("div");
+        l.className="letter";
+        l.textContent=decoyLetters[k];
+        cell.appendChild(l);
+      }
+
+      if(player.r===r&&player.c===c){
+        const p=document.createElement("div");
+        p.className="player";
+        p.textContent="🧍";
+        cell.appendChild(p);
+      }
+
+      if(!visible(r,c)) cell.classList.add("unknown");
+      maze.appendChild(cell);
+    }
+  }
+
+  const solution=Array(9).fill("_");
+  for(const k of collected){
+    const info=correctLetters[k];
+    solution[info.index]=info.letter;
+  }
+  wordEl.textContent=solution.join(" ");
+  countEl.textContent=collected.size;
+  stepsEl.textContent=steps;
+  mistakesEl.textContent=mistakes;
+}
+
+function move(dr,dc){
+  const nr=player.r+dr;
+  const nc=player.c+dc;
+
+  if(!isFloor(nr,nc)){
+    msg.textContent="Da ist eine Wand 😄";
+    return;
+  }
+
+  player={r:nr,c:nc};
+  steps++;
+  const k=key(nr,nc);
+
+  if(decoyLetters[k]&&!triggeredDecoys.has(k)){
+    triggeredDecoys.add(k);
+    mistakes++;
+    msg.textContent=`Oh nein – ${decoyLetters[k]} war falsch! Zurück zum Start 😈`;
+    player={...start};
+    render();
+    return;
+  }
+
+  if(correctLetters[k]&&!collected.has(k)){
+    collected.add(k);
+    msg.textContent=`Richtig! Buchstabe ${correctLetters[k].letter} gefunden ✨`;
+  } else if(fakeExits.has(k)){
+    msg.textContent="Falscher Ausgang 😈 Weiter suchen!";
+  } else {
+    msg.textContent="Weiter …";
+  }
+
+  if(raw[nr][nc]==="G"){
+    if(collected.size===9){
+      render();
+      setTimeout(()=>win.classList.add("show"),160);
+      return;
+    } else {
+      msg.textContent=`Das ist der echte Ausgang – aber dir fehlen noch ${9-collected.size} Buchstabe(n)!`;
+    }
+  }
+  render();
+}
+
+function moveDir(dir){
+  if(dir==="up")move(-1,0);
+  if(dir==="down")move(1,0);
+  if(dir==="left")move(0,-1);
+  if(dir==="right")move(0,1);
+}
+
+document.addEventListener("keydown",e=>{
+  const map={
+    "arrowup":"up","w":"up",
+    "arrowdown":"down","s":"down",
+    "arrowleft":"left","a":"left",
+    "arrowright":"right","d":"right"
+  };
+  const d=map[e.key.toLowerCase()];
+  if(d){e.preventDefault();moveDir(d);}
+});
+
+document.querySelectorAll(".controls button").forEach(b=>
+  b.addEventListener("click",()=>moveDir(b.dataset.dir))
+);
+
+function resetGame(){
+  player={...start};
+  collected=new Set();
+  triggeredDecoys=new Set();
+  steps=0;
+  mistakes=0;
+  win.classList.remove("show");
+  msg.textContent="Steuerung: Pfeiltasten oder WASD.";
+  render();
+}
+
+document.getElementById("reset").addEventListener("click",resetGame);
+render();
+</script>
+</body>
+</html>
