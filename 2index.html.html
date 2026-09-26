@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wie gut kennst du unseren Abend?</title>
+<style>
+:root{--bg:#fffaf1;--card:#ffffff;--text:#222;--muted:#6f6f6f;--accent:#ffd86b;--border:#222}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#fff4cf,#fffdf8);color:var(--text);padding:28px 14px 40px}
+.wrap{width:min(760px,100%);margin:0 auto}
+h1{margin:0 0 8px;text-align:center;font-size:clamp(30px,5vw,48px)}
+.intro{text-align:center;margin:0 auto 20px;max-width:640px;line-height:1.5}
+.progress{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+.pill{background:#fff;border:2px solid var(--border);border-radius:999px;padding:8px 14px;font-weight:800;box-shadow:3px 3px 0 var(--border)}
+.letters{display:flex;gap:10px;justify-content:center;margin:10px 0 22px}
+.letter-box{width:64px;height:64px;border:3px solid var(--border);border-radius:14px;background:#f4f4f4;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:1000;box-shadow:4px 4px 0 var(--border)}
+.letter-box.revealed{background:var(--accent)}
+.card{background:var(--card);border:3px solid var(--border);border-radius:22px;padding:24px;box-shadow:8px 8px 0 rgba(0,0,0,.14)}
+.q-number{font-size:14px;font-weight:800;color:var(--muted);margin-bottom:6px}
+.question{font-size:clamp(22px,4vw,30px);font-weight:900;line-height:1.25;margin-bottom:18px}
+form{display:flex;gap:10px;flex-wrap:wrap}
+input{flex:1 1 280px;min-width:0;font:inherit;font-size:18px;padding:13px 14px;border:2px solid var(--border);border-radius:12px;outline:none}
+input:focus{box-shadow:0 0 0 4px rgba(0,0,0,.08)}
+button{border:2px solid var(--border);background:var(--accent);border-radius:12px;padding:12px 18px;font:inherit;font-weight:900;cursor:pointer;box-shadow:3px 3px 0 var(--border)}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--border)}
+.feedback{min-height:28px;margin-top:15px;font-weight:800}
+.hint{margin-top:12px;padding:12px 14px;border:2px dashed var(--border);border-radius:12px;background:#fff7d8;display:none;line-height:1.45}
+.hint.show{display:block}
+.tiny{text-align:center;margin-top:12px;color:var(--muted);font-size:14px}
+.win{display:none;margin-top:22px;background:#fff;border:3px solid var(--border);border-radius:22px;padding:28px;box-shadow:8px 8px 0 rgba(0,0,0,.14);text-align:center}
+.win.show{display:block}
+.wtf{font-size:clamp(54px,12vw,92px);font-weight:1000;letter-spacing:.12em;margin:10px 0}
+.final-text{font-size:20px;font-weight:800}
+#restart{margin-top:14px}
+@media(max-width:520px){.card{padding:18px}button{width:100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Wie gut kennst du unseren Abend? 😈</h1>
+  <p class="intro">Zehn Fragen. Keine Auswahlmöglichkeiten. Nur dein Gedächtnis. Nach drei Fehlversuchen gibt es einen Hinweis – aber geschenkt wird dir hier trotzdem nichts.</p>
+
+  <div class="progress">
+    <div class="pill">Frage <span id="qNow">1</span>/10</div>
+    <div class="pill">Fehler: <span id="wrongTotal">0</span></div>
+  </div>
+
+  <div class="letters">
+    <div class="letter-box" id="boxW">?</div>
+    <div class="letter-box" id="boxT">?</div>
+    <div class="letter-box" id="boxF">?</div>
+  </div>
+
+  <div class="card" id="quizCard">
+    <div class="q-number" id="qNumber">Frage 1 von 10</div>
+    <div class="question" id="question"></div>
+    <form id="answerForm">
+      <input id="answerInput" type="text" autocomplete="off" placeholder="Deine Antwort …">
+      <button type="submit">Antworten</button>
+    </form>
+    <div class="feedback" id="feedback"></div>
+    <div class="hint" id="hint1"></div>
+    <div class="hint" id="hint2"></div>
+  </div>
+
+  <div class="tiny">Groß-/Kleinschreibung ist egal. Kleine Schreibvarianten werden akzeptiert.</div>
+
+  <div class="win" id="win">
+    <div class="final-text">Okay. Du hast es tatsächlich geschafft.</div>
+    <div class="wtf">WTF</div>
+    <div class="final-text">Dann hast du dir dein Geschenk wohl verdient. 😌</div>
+    <button id="restart" type="button">Nochmal spielen</button>
+  </div>
+</div>
+
+<script>
+const quiz = [
+  {q:"Was ist unser häufigstes Gericht, das wir gekocht haben?",answers:["nudeln mit pesto","pesto nudeln","pestonudeln","nudeln pesto"],h1:"Etwas sehr unkompliziertes mit Pasta 🍝",h2:"Grün oder rot – Hauptsache Pesto."},
+  {q:"Von wem haben wir schon Adoptivkinder bekommen?",answers:["günther von schiffke","gunther von schiffke","guenther von schiffke","gustav von schiffke"],h1:"Der Nachname klingt ein bisschen nach Seefahrt 🚢",h2:"Vorname entweder Günther oder Gustav."},
+  {q:"Was ist unsere Erleuchtung?",answers:["lichterkette","die lichterkette"],h1:"Sie leuchtet. Sehr überraschend. ✨",h2:"Sie hängt vermutlich irgendwo und macht alles gemütlicher."},
+  {q:"Wovon leitet sich unser Name ab?",answers:["commilito","comilito"],h1:"Das Wort ist lateinisch.",h2:"Es beginnt mit 'com…'."},
+  {q:"Worin wurden wir schon unterrichtet?",answers:["dna machen","dna","dna herstellen"],h1:"Etwas sehr wissenschaftlich klingendes 🧬",h2:"Es geht darum, DNA zu … machen."},
+  {q:"Was haben wir durchgespielt?",answers:["the crew","crew"],h1:"Ein kooperatives Kartenspiel.",h2:"Der Titel beginnt mit 'The …'."},
+  {q:"Wer malt unseren Tag immer am ausführlichsten?",answers:["mareike"],h1:"Eine Person aus unserer Runde.",h2:"Der Name beginnt mit M."},
+  {q:"Was ist unser Standardgetränk?",answers:["tee","tea"],h1:"Warm, gemütlich und fast immer dabei ☕",h2:"Es hat nur drei Buchstaben."},
+  {q:"Was ist dein Standardemoji?",answers:["sterne","stern","✨","glitzer","sparkles"],h1:"Es funkelt.",h2:"✨"},
+  {q:"Welche beiden Saisons haben am seltensten special Klopapier?",answers:["halloween und ostern","ostern und halloween","halloween ostern","ostern halloween"],h1:"Eine Saison ist gruselig, die andere hat Hasen.",h2:"Halloween und … 🐰"}
+];
+
+let current=0, wrongThisQuestion=0, wrongTotal=0;
+const qNow=document.getElementById("qNow");
+const qNumber=document.getElementById("qNumber");
+const question=document.getElementById("question");
+const input=document.getElementById("answerInput");
+const form=document.getElementById("answerForm");
+const feedback=document.getElementById("feedback");
+const hint1=document.getElementById("hint1");
+const hint2=document.getElementById("hint2");
+const wrongTotalEl=document.getElementById("wrongTotal");
+const quizCard=document.getElementById("quizCard");
+const win=document.getElementById("win");
+
+function normalize(s){
+  return s.toLowerCase().trim().replace(/[.,!?;:]/g,"").replace(/\s+/g," ");
+}
+function renderQuestion(){
+  const item=quiz[current];
+  qNow.textContent=current+1;
+  qNumber.textContent=`Frage ${current+1} von ${quiz.length}`;
+  question.textContent=item.q;
+  input.value="";
+  feedback.textContent="";
+  hint1.textContent="Hinweis 1: "+item.h1;
+  hint2.textContent="Hinweis 2: "+item.h2;
+  hint1.classList.remove("show");
+  hint2.classList.remove("show");
+  wrongThisQuestion=0;
+  input.focus();
+}
+function revealLetters(){
+  if(current>=3){const b=document.getElementById("boxW");b.textContent="W";b.classList.add("revealed")}
+  if(current>=6){const b=document.getElementById("boxT");b.textContent="T";b.classList.add("revealed")}
+  if(current>=10){const b=document.getElementById("boxF");b.textContent="F";b.classList.add("revealed")}
+}
+form.addEventListener("submit",e=>{
+  e.preventDefault();
+  const userAnswer=normalize(input.value);
+  if(!userAnswer){feedback.textContent="Du musst schon irgendwas eingeben 😌";return}
+  const accepted=quiz[current].answers.map(normalize);
+  if(accepted.includes(userAnswer)){
+    feedback.textContent="Richtig ✨";
+    input.disabled=true;
+    setTimeout(()=>{
+      current++;
+      revealLetters();
+      if(current>=quiz.length){
+        quizCard.style.display="none";
+        win.classList.add("show");
+        qNow.textContent=quiz.length;
+      }else{
+        input.disabled=false;
+        renderQuestion();
+      }
+    },650);
+  }else{
+    wrongThisQuestion++;
+    wrongTotal++;
+    wrongTotalEl.textContent=wrongTotal;
+    const comments=["Nö 😌 Versuch's nochmal.","Das war's nicht.","Uff. Nein. 😄","Du weißt das doch eigentlich.","Ich bin ein bisschen enttäuscht."];
+    feedback.textContent=comments[Math.min(wrongThisQuestion-1,comments.length-1)];
+    if(wrongThisQuestion>=3)hint1.classList.add("show");
+    if(wrongThisQuestion>=5)hint2.classList.add("show");
+    input.select();
+  }
+});
+document.getElementById("restart").addEventListener("click",()=>{
+  current=0;wrongThisQuestion=0;wrongTotal=0;wrongTotalEl.textContent="0";
+  ["boxW","boxT","boxF"].forEach(id=>{const b=document.getElementById(id);b.textContent="?";b.classList.remove("revealed")});
+  win.classList.remove("show");quizCard.style.display="block";input.disabled=false;renderQuestion();
+});
+renderQuestion();
+</script>
+</body>
+</html>
