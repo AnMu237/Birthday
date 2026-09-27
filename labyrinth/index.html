@@ -122,6 +122,24 @@ h1{margin:0 0 6px;font-size:clamp(26px,4vw,44px)}
   .confetti,.explosion{animation-duration:.01ms}
 }
 
+.gameover{
+  position:fixed;inset:0;background:rgba(0,0,0,.60);
+  display:none;align-items:center;justify-content:center;
+  padding:20px;z-index:35;
+}
+.gameover.show{display:flex}
+.gameover-card{
+  width:min(460px,100%);background:#fffdf4;border:3px solid #222;
+  border-radius:22px;padding:28px;text-align:center;box-shadow:10px 10px 0 #222;
+}
+.gameover-card h2{font-size:40px;margin:0 0 10px}
+.gameover-card p{font-size:18px;line-height:1.45}
+.gameover-card button{
+  margin-top:10px;padding:11px 18px;border:2px solid #222;border-radius:12px;
+  background:var(--accent);font:inherit;font-weight:900;cursor:pointer;
+  box-shadow:3px 3px 0 #222;
+}
+
 .win{position:fixed;inset:0;background:rgba(0,0,0,.46);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
 .win.show{display:flex}
 .card{max-width:500px;width:100%;background:#fffdf4;border:3px solid #222;border-radius:22px;padding:28px;box-shadow:10px 10px 0 #222}
@@ -142,7 +160,7 @@ h1{margin:0 0 6px;font-size:clamp(26px,4vw,44px)}
   <div class="hud">
     <div class="pill">Gefunden: <span id="count">0</span>/9</div>
     <div class="pill word" id="word">_ _ _ _ _ _ _ _ _</div>
-    <div class="pill">Fehler: <span id="mistakes">0</span></div>
+    <div class="pill">Leben: <span id="lives">❤️❤️❤️</span></div>
     <div class="pill">Schritte: <span id="steps">0</span></div>
   </div>
 
@@ -173,6 +191,14 @@ h1{margin:0 0 6px;font-size:clamp(26px,4vw,44px)}
 </div>
 
 <div class="fx-layer" id="fxLayer"></div>
+
+<div class="gameover" id="gameover">
+  <div class="gameover-card">
+    <h2>GAME OVER 💥</h2>
+    <p>Alle 3 Leben sind weg. Deine gesammelten Buchstaben sind verloren und du musst wieder ganz von vorne anfangen.</p>
+    <button id="gameoverRestart" type="button">Nochmal von vorne</button>
+  </div>
+</div>
 
 <div class="win" id="win">
   <div class="card">
@@ -236,9 +262,10 @@ const decoyLetters={
   "4,21": "E",
   "1,25": "L"
 };
-const fakeExits=new Set(["15,3"]);
+const fakeExits=new Set(["15,3","3,15"]);
 const secretDoors={
-  "15,3": {r:3,c:15}
+  "15,3": {r:3,c:15},
+  "3,15": {r:15,c:3}
 };
 
 const start={r:1,c:1};
@@ -247,7 +274,7 @@ let collected=new Set();
 let collectedOrder=[];
 let trailHistory=[];
 let steps=0;
-let mistakes=0;
+let lives=3;
 let pendingLetter=null;
 let movementLocked=false;
 
@@ -255,7 +282,7 @@ const maze=document.getElementById("maze");
 const wordEl=document.getElementById("word");
 const countEl=document.getElementById("count");
 const stepsEl=document.getElementById("steps");
-const mistakesEl=document.getElementById("mistakes");
+const livesEl=document.getElementById("lives");
 const msg=document.getElementById("msg");
 const win=document.getElementById("win");
 const decision=document.getElementById("decision");
@@ -263,6 +290,8 @@ const decisionLetter=document.getElementById("decisionLetter");
 const takeYes=document.getElementById("takeYes");
 const takeNo=document.getElementById("takeNo");
 const fxLayer=document.getElementById("fxLayer");
+const gameover=document.getElementById("gameover");
+const gameoverRestart=document.getElementById("gameoverRestart");
 
 function key(r,c){return `${r},${c}`;}
 function isFloor(r,c){return raw[r]&&raw[r][c]&&raw[r][c]!=="#";}
@@ -329,7 +358,7 @@ function render(){
   wordEl.textContent=solution.join(" ");
   countEl.textContent=collected.size;
   stepsEl.textContent=steps;
-  mistakesEl.textContent=mistakes;
+  livesEl.textContent="❤️".repeat(lives)+"🖤".repeat(3-lives);
 }
 
 function showConfetti(){
@@ -375,7 +404,7 @@ function finishCellEffects(k,nr,nc){
     const target=secretDoors[k];
     player={r:target.r,c:target.c};
     trailHistory=Array.from({length:collectedOrder.length},()=>({r:target.r,c:target.c}));
-    msg.textContent="Geheimtür! 👀 Du bist an einer anderen Stelle des Labyrinths gelandet.";
+    msg.textContent="Tunnel! 🚪 Du bist am anderen Ende der Geheimtür herausgekommen.";
     render();
     return;
   }
@@ -408,18 +437,19 @@ takeYes.addEventListener("click",()=>{
     msg.textContent=`Jaaa! ${letter} war richtig 🎉`;
     render();
   }else{
-    mistakes++;
+    lives--;
     closeLetterDecision();
     showExplosion();
 
-    // Wrong choice: back to the start and ALL collected letters are lost.
-    collected=new Set();
-    collectedOrder=[];
-    trailHistory=[];
-    player={...start};
-
-    msg.textContent=`BOOM 💥 ${letter} war falsch! Zurück zum Start – und alle Buchstaben sind weg.`;
-    render();
+    if(lives>0){
+      msg.textContent=`BOOM 💥 ${letter} war falsch! Du verlierst ein Leben, kannst aber hier weitermachen.`;
+      render();
+    }else{
+      movementLocked=true;
+      msg.textContent="Keine Leben mehr 💀";
+      render();
+      setTimeout(()=>gameover.classList.add("show"),500);
+    }
   }
 });
 
@@ -493,13 +523,15 @@ function resetGame(){
   movementLocked=false;
   decision.classList.remove("show");
   steps=0;
-  mistakes=0;
+  lives=3;
+  gameover.classList.remove("show");
   win.classList.remove("show");
   msg.textContent="Steuerung: Pfeiltasten oder WASD.";
   render();
 }
 
 document.getElementById("reset").addEventListener("click",resetGame);
+gameoverRestart.addEventListener("click",resetGame);
 render();
 </script>
 </body>
