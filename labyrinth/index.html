@@ -91,7 +91,7 @@ h1{margin:0 0 6px;font-size:clamp(26px,4vw,44px)}
   </div>
 
   <div id="maze"></div>
-  <div class="small">Du siehst nur den Bereich direkt um dein Männchen. 🚪 kann ein falscher Ausgang sein.</div>
+  <div class="small">🚪 kann ein falscher Ausgang sein. Manche Buchstaben sind Fallen.</div>
 
   <div class="controls">
     <button class="up" data-dir="up">▲</button>
@@ -185,11 +185,6 @@ const win=document.getElementById("win");
 
 function key(r,c){return `${r},${c}`;}
 function isFloor(r,c){return raw[r]&&raw[r][c]&&raw[r][c]!=="#";}
-function visible(r,c){
-  const dr=Math.abs(r-player.r);
-  const dc=Math.abs(c-player.c);
-  return dr+dc<=3;
-}
 
 function render(){
   maze.innerHTML="";
@@ -229,7 +224,6 @@ function render(){
         cell.appendChild(p);
       }
 
-      if(!visible(r,c)) cell.classList.add("unknown");
       maze.appendChild(cell);
     }
   }
