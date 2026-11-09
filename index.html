@@ -103,7 +103,7 @@ function advance(){state.unlocked=Math.max(state.unlocked,state.level+1);state.l
 function msg(s,good=false){feedback=`<div class="notice ${good?'':'bad'}">${s}</div>`;renderFeedback()}
 function renderFeedback(){const area=$('feedback');if(area)area.innerHTML=feedback}
 function shell(inner){const n=state.level;return `<div class="seal">⚜</div><div class="eyebrow">${SUBS[n]}</div><h1>${n===0?'Der Ruf der letzten Ritter':TITLES[n]}</h1>${n===0?'<h2>Eine Botschaft des Hohen Rates · Anno Domini MCCXI</h2>':'<h2>Eine Prüfung des Hohen Rates</h2>'}<div class="line"></div><div class="story">${inner}</div><div id="feedback">${feedback}</div>`}
-function gift(title,text){return `<div class="gift"><div class="gift-title">🎁 EIN GESCHENK WIRD ÜBERREICHT</div><p><strong>${title}</strong><br>${text}</p></div>`}
+function gift(title,text){return `<div class="gift"><div class="gift-title">🎁 EINE BELOHNUNG WIRD ÜBERREICHT</div><p><strong>${title}</strong><br>${text}</p></div>`}
 function next(text='Die nächste Prüfung antreten'){return `<div class="cta-row"><button class="cta" onclick="advance()">${text} →</button></div>`}
 function choice(id,options){return `<div class="choices">${options.map(o=>`<button class="choice ${get(id)==o.v?'selected':''}" onclick="setGameAnswer('${id}','${o.v}');render()"><strong>${o.t}</strong><small>${o.s||''}</small></button>`).join('')}</div>`}
 function field(id,label,placeholder='Antwort eingeben'){return `<label for="${id}">${label}</label><input id="${id}" type="text" placeholder="${placeholder}" value="${esc(get(id))}" autocomplete="off" data-answer="${id}">`}
